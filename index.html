@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bomberman Mobile</title>
+<style>
+* {
+    box-sizing: border-box;
+    touch-action: manipulation;
+}
+
+body { 
+    background:#222; 
+    color:#fff; 
+    text-align:center; 
+    font-family:sans-serif; 
+    margin:0; 
+    padding:0; 
+    overflow: hidden;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+#gameContainer {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    max-width: 100%;
+    overflow: hidden;
+}
+#startScreen, #gameOverScreen, #levelCompleteScreen, #quizManagerScreen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+    padding: 20px;
+}
+#gameScreen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+canvas { 
+    background:#333; 
+    display:block; 
+    margin: 0 auto;
+    max-width: 100%;
+    max-height: 60vh;
+    border: 2px solid #555;
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
+}
+#quizModal, #addQuestionModal { 
+    display:none; 
+    position:fixed; 
+    top:50%; 
+    left:50%; 
+    transform:translate(-50%,-50%);
+    background:#333; 
+    padding:20px; 
+    border:2px solid #fff; 
+    border-radius:10px; 
+    z-index:30; 
+    min-width: 300px;
+    max-width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+}
+#quizModal button, #addQuestionModal button { 
+    margin:5px; 
+    padding:10px 15px;
+    background: #444;
+    color: white;
+    border: 1px solid #666;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+#quizModal button:hover, #addQuestionModal button:hover {
+    background: #555;
+    transform: scale(1.05);
+}
+#overlay { 
+    display:none; 
+    position:fixed; 
+    top:0; 
+    left:0; 
+    width:100%; 
+    height:100%; 
+    background:rgba(0,0,0,0.7); 
+    z-index:25; 
+}
+#info { 
+    margin:10px; 
+    font-size:18px; 
+    background: rgba(0,0,0,0.5);
+    padding: 10px 20px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+}
+#powerUpInfo {
+    margin: 5px;
+    font-size: 14px;
+    color: #ffcc00;
+}
+.buttons {
+    margin: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+.buttons button {
+    padding: 12px 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s;
+    min-width: 140px;
+}
+.buttons button:hover {
+    background: #45a049;
+    transform: scale(1.05);
+}
+.buttons button.secondary {
+    background: #555;
+}
+.buttons button.secondary:hover {
+    background: #666;
+}
+h1 {
+    color: #ffcc00;
+    text-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+    margin-bottom: 20px;
+    font-size: 2rem;
+}
+.question-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin: 15px 0;
+    padding: 10px;
+    background: #444;
+    border-radius: 5px;
+    width: 90%;
+    max-width: 600px;
+}
+.question-item {
+    background: #555;
+    margin: 8px 0;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: left;
+}
+.question-item button {
+    margin-left: 10px;
+    padding: 5px 10px;
+}
+.form-group {
+    margin: 10px 0;
+    text-align: left;
+}
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+}
+.form-group input, .form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border-radius: 5px;
+    border: 1px solid #666;
+    background: #444;
+    color: white;
+}
+.option-input {
+    display: flex;
+    align-items: center;
+    margin: 5px 0;
+}
+.option-input input {
+    flex: 1;
+    margin-right: 10px;
+}
+.option-input button {
+    padding: 5px 10px;
+}
+
+/* Mobile Controls */
+#mobileControls {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    z-index: 10;
+}
+
+.control-group {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 10px;
+}
+
+.d-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 5px;
+    width: 150px;
+    height: 150px;
+}
+
+.d-pad button {
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.3);
+    border: none;
+    border-radius: 5px;
+    font-size: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.d-pad button:active {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+#upBtn {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+#leftBtn {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+#rightBtn {
+    grid-column: 3;
+    grid-row: 2;
+}
+
+#downBtn {
+    grid-column: 2;
+    grid-row: 3;
+}
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.action-buttons button {
+    padding: 15px;
+    background: rgba(255, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 16px;
+    width: 70px;
+    height: 70px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-buttons button:active {
+    background: rgba(255, 0, 0, 0.7);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+    
+    .buttons button {
+        padding: 10px 15px;
+        font-size: 14px;
+        min-width: 120px;
+    }
+    
+    #info {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+    
+    #mobileControls {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 20px;
+    }
+    
+    .d-pad {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .action-buttons button {
+        width: 60px;
+        height: 60px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.2rem;
+    }
+    
+    .buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .buttons button {
+        width: 100%;
+        max-width: 200px;
+    }
+    
+    #mobileControls {
+        bottom: 10px;
+        padding: 5px 10px;
+    }
+    
+    .d-pad {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .action-buttons button {
+        width: 50px;
+        height: 50px;
+        font-size: 12px;
+    }
+    
+    canvas {
+        max-height: 50vh;
+    }
+}
+
+/* Orientation warning */
+#orientationWarning {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+    #orientationWarning {
+        display: flex;
+    }
+    
+    #gameContainer {
+        display: none;
+    }
+}
+</style>
+</head>
+<body>
+<div id="orientationWarning">
+    <h2>Silahkan Putar Perangkat Anda</h2>
+    <p>Game ini lebih nyaman dimainkan dalam mode portrait (tegak).</p>
+</div>
+
+<div id="gameContainer">
+    <div id="startScreen">
+        <h1>BOMBERMAN MOBILE</h1>
+        <div class="buttons">
+            <button onclick="startGame()">START GAME</button>
+            <button onclick="showQuizManager()">KELOLA SOAL KUIS</button>
+            <button onclick="showInstructions()">INSTRUCTIONS</button>
+        </div>
+    </div>
+
+    <div id="gameScreen">
+        <div id="info">Skor: 0 | Nyawa: 3 | Bom: 1 | Jangkauan: 1 | Level: 1</div>
+        <div id="powerUpInfo"></div>
+        <canvas id="gameCanvas" width="520" height="440"></canvas>
+        
+        <div id="mobileControls">
+            <div class="control-group">
+                <div class="d-pad">
+                    <button id="upBtn">↑</button>
+                    <button id="leftBtn">←</button>
+                    <button id="rightBtn">→</button>
+                    <button id="downBtn">↓</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <div class="action-buttons">
+                    <button id="bombBtn">BOM</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" style="display:none">
+        <h1>GAME OVER</h1>
+        <h2 id="finalScore">Skor Akhir: 0</h2>
+        <div class="buttons">
+            <button onclick="restartGame()">MAIN LAGI</button>
+            <button onclick="backToMenu()">KEMBALI KE MENU</button>
+        </div>
+    </div>
+
+    <div id="levelCompleteScreen" style="display:none">
+        <h1>LEVEL COMPLETE!</h1>
+        <h2 id="levelScore">Skor Level: 0</h2>
+        <div class="buttons">
+            <button onclick="nextLevel()">NEXT LEVEL</button>
+        </div>
+    </div>
+
+    <div id="quizManagerScreen" style="display:none">
+        <h1>KELOLA SOAL KUIS</h1>
+        <div style="margin: 15px;">
+            <label for="questionsPerLevel">Jumlah Soal per Level:</label>
+            <input type="number" id="questionsPerLevel" min="1" max="10" value="3" style="width: 60px; padding: 5px;">
+        </div>
+        <div class="buttons">
+            <button onclick="showAddQuestionForm()">TAMBAH SOAL BARU</button>
+            <button onclick="backToMenu()" class="secondary">KEMBALI KE MENU</button>
+        </div>
+        <div class="question-list" id="questionList">
+            <!-- Daftar soal akan dimuat di sini -->
+        </div>
+    </div>
+</div>
+
+<div id="overlay"></div>
+<div id="quizModal">
+    <h3 id="question"></h3>
+    <div id="options"></div>
+</div>
+
+<div id="addQuestionModal">
+    <h3>Tambah Soal Baru</h3>
+    <div class="form-group">
+        <label for="newQuestion">Pertanyaan:</label>
+        <textarea id="newQuestion" rows="3"></textarea>
+    </div>
+    <div class="form-group">
+        <label>Opsi Jawaban:</label>
+        <div id="optionInputs">
+            <div class="option-input">
+                <input type="text" placeholder="Opsi jawaban">
+                <button onclick="markAsCorrect(this)">✓</button>
+                <button onclick="removeOption(this)" class="secondary">✕</button>
+            </div>
+        </div>
+        <button onclick="addOption()" style="margin-top: 10px;">+ Tambah Opsi</button>
+    </div>
+    <div class="buttons">
+        <button onclick="saveNewQuestion()">SIMPAN SOAL</button>
+        <button onclick="closeAddQuestionForm()" class="secondary">BATAL</button>
+    </div>
+</div>
+
+<script>
+// ========== GAME STATE ==========
+let currentLevel = 1;
+let maxLevels = 3;
+let gameStarted = false;
+let questionsPerLevel = 3; // Default jumlah soal per level
+let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// ========== DATA KUIS ==========
+// Data soal kuis (disimpan di localStorage jika tersedia)
+let quizQuestions = JSON.parse(localStorage.getItem('bombermanQuizQuestions')) || [
+    { id: 1, question: "Apa ibu kota Indonesia?", options: ["Jakarta", "Bandung", "Surabaya", "Medan"], answer: 0 },
+    { id: 2, question: "2+3=?", options: ["4", "5", "6", "7"], answer: 1 },
+    { id: 3, question: "Bulan pertama?", options: ["Februari", "Maret", "Januari", "April"], answer: 2 },
+    { id: 4, question: "Hewan berkaki 4?", options: ["Burung", "Kucing", "Ayam", "Ikan"], answer: 1 },
+    { id: 5, question: "Warna campuran merah+biru?", options: ["Hijau", "Ungu", "Kuning", "Hitam"], answer: 1 }
+];
+
+// Soal yang aktif di level saat ini
+let activeQuizPoints = [];
+
+// ========== GAME VARIABLES ==========
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const tileSize = 40;
+const rows = 11;
+const cols = 13;
+
+// Adjust canvas size for mobile
+function adjustCanvasSize() {
+    if (isMobile) {
+        const maxWidth = window.innerWidth * 0.9;
+        const maxHeight = window.innerHeight * 0.5;
+        
+        // Calculate the best size to maintain aspect ratio
+        const widthRatio = maxWidth / (cols * tileSize);
+        const heightRatio = maxHeight / (rows * tileSize);
+        const ratio = Math.min(widthRatio, heightRatio);
+        
+        canvas.width = cols * tileSize * ratio;
+        canvas.height = rows * tileSize * ratio;
+    } else {
+        canvas.width = cols * tileSize;
+        canvas.height = rows * tileSize;
+    }
+}
+
+let map = [];
+let player = { x: 1, y: 1, nyawa: 3, speed: 1, maxBombs: 1, bombRange: 1 };
+let bombs = [];
+let explosions = [];
+let score = 0;
+let enemies = [];
+let powerUps = [];
+let gameLoopId;
+let enemyMoveInterval;
+let lastRenderTime = 0;
+const frameRate = 60;
+const frameInterval = 1000 / frameRate;
+
+// ========== MOBILE CONTROLS ==========
+function setupMobileControls() {
+    if (!isMobile) return;
+    
+    const upBtn = document.getElementById('upBtn');
+    const leftBtn = document.getElementById('leftBtn');
+    const rightBtn = document.getElementById('rightBtn');
+    const downBtn = document.getElementById('downBtn');
+    const bombBtn = document.getElementById('bombBtn');
+    
+    // Touch events for movement
+    const handleMovement = (direction) => {
+        let nx = player.x, ny = player.y;
+        
+        switch(direction) {
+            case 'up': ny -= player.speed; break;
+            case 'down': ny += player.speed; break;
+            case 'left': nx -= player.speed; break;
+            case 'right': nx += player.speed; break;
+        }
+        
+        // Check if the movement is valid
+        const intX = Math.round(nx);
+        const intY = Math.round(ny);
+        
+        if (map[intY] && map[intY][intX] === 0) {
+            player.x = intX;
+            player.y = intY;
+            checkQuiz();
+        }
+    };
+    
+    // Add event listeners
+    upBtn.addEventListener('touchstart', () => handleMovement('up'));
+    leftBtn.addEventListener('touchstart', () => handleMovement('left'));
+    rightBtn.addEventListener('touchstart', () => handleMovement('right'));
+    downBtn.addEventListener('touchstart', () => handleMovement('down'));
+    bombBtn.addEventListener('touchstart', () => placeBomb());
+    
+    // Prevent context menu on long press
+    const preventContextMenu = (e) => {
+        e.preventDefault();
+        return false;
+    };
+    
+    upBtn.addEventListener('contextmenu', preventContextMenu);
+    leftBtn.addEventListener('contextmenu', preventContextMenu);
+    rightBtn.addEventListener('contextmenu', preventContextMenu);
+    downBtn.addEventListener('contextmenu', preventContextMenu);
+    bombBtn.addEventListener('contextmenu', preventContextMenu);
+}
+
+// ========== GAME INITIALIZATION ==========
+function initGame() {
+    // Reset game state
+    map = Array(rows).fill().map(() => Array(cols).fill(0));
+    player = { x: 1, y: 1, nyawa: 3, speed: 1, maxBombs: 1, bombRange: 1 };
+    bombs = [];
+    explosions = [];
+    score = 0;
+    enemies = [];
+    powerUps = [];
+    
+    // Adjust canvas size for mobile
+    adjustCanvasSize();
+    
+    // Setup mobile controls if needed
+    if (isMobile) {
+        setupMobileControls();
+    }
+    
+    // Ambil setting jumlah soal per level
+    questionsPerLevel = parseInt(document.getElementById('questionsPerLevel').value) || 3;
+    
+    // Generate map based on level
+    generateMap();
+    
+    // Generate quiz points untuk level ini
+    generateQuizPoints();
+    
+    // Generate enemies based on level
+    generateEnemies();
+    
+    // Update info display
+    updateInfo();
+    
+    // Start game loop
+    if (gameLoopId) cancelAnimationFrame(gameLoopId);
+    lastRenderTime = performance.now();
+    gameLoopId = requestAnimationFrame(gameLoop);
+    
+    // Start enemy movement interval
+    if (enemyMoveInterval) clearInterval(enemyMoveInterval);
+    enemyMoveInterval = setInterval(moveEnemies, 1000 - Math.min(400, currentLevel * 100));
+}
+
+function generateMap() {
+    // Create solid borders
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (r === 0 || r === rows - 1 || c === 0 || c === cols - 1 || (r % 2 === 0 && c % 2 === 0)) {
+                map[r][c] = 1; // Solid wall
+            } else if (Math.random() < (0.2 + currentLevel * 0.05) && !(r < 3 && c < 3)) {
+                map[r][c] = 2; // Breakable wall
+            } else {
+                map[r][c] = 0; // Empty space
+            }
+        }
+    }
+    
+    // Add some power-ups under breakable walls
+    for (let r = 1; r < rows - 1; r++) {
+        for (let c = 1; c < cols - 1; c++) {
+            if (map[r][c] === 2 && Math.random() < 0.2) {
+                const powerUpType = Math.floor(Math.random() * 3); // 0: bomb, 1: range, 2: speed
+                powerUps.push({ x: c, y: r, type: powerUpType });
+            }
+        }
+    }
+}
+
+function generateQuizPoints() {
+    activeQuizPoints = [];
+    
+    // Acak urutan soal
+    const shuffledQuestions = [...quizQuestions].sort(() => Math.random() - 0.5);
+    
+    // Ambil jumlah soal sesuai setting untuk level ini
+    const questionsForThisLevel = Math.min(questionsPerLevel, shuffledQuestions.length);
+    
+    for (let i = 0; i < questionsForThisLevel; i++) {
+        if (i < shuffledQuestions.length) {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * (cols - 4)) + 2;
+                y = Math.floor(Math.random() * (rows - 4)) + 2;
+            } while (map[y][x] !== 0 || 
+                     (x === player.x && y === player.y) || 
+                     activeQuizPoints.some(q => q.x === x && q.y === y));
+            
+            activeQuizPoints.push({
+                ...shuffledQuestions[i],
+                x: x,
+                y: y,
+                done: false
+            });
+        }
+    }
+}
+
+function generateEnemies() {
+    enemies = [];
+    const enemyCount = 2 + currentLevel;
+    
+    for (let i = 0; i < enemyCount; i++) {
+        let x, y;
+        do {
+            x = Math.floor(Math.random() * (cols - 4)) + 2;
+            y = Math.floor(Math.random() * (rows - 4)) + 2;
+        } while (map[y][x] !== 0 || 
+                 (x === player.x && y === player.y) || 
+                 enemies.some(e => e.x === x && e.y === y) ||
+                 activeQuizPoints.some(q => q.x === x && q.y === y));
+        
+        enemies.push({ x, y, speed: 0.5 + currentLevel * 0.1 });
+    }
+}
+
+// ========== GAME LOOP ==========
+function gameLoop(timestamp) {
+    const deltaTime = timestamp - lastRenderTime;
+    
+    if (deltaTime > frameInterval) {
+        lastRenderTime = timestamp - (deltaTime % frameInterval);
+        
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate scaling factors for mobile
+        const scaleX = canvas.width / (cols * tileSize);
+        const scaleY = canvas.height / (rows * tileSize);
+        
+        // Save the context
+        ctx.save();
+        
+        // Scale the context if on mobile
+        if (isMobile) {
+            ctx.scale(scaleX, scaleY);
+        }
+        
+        // Draw map
+        drawMap();
+        
+        // Draw power-ups
+        drawPowerUps();
+        
+        // Draw bombs and handle explosions
+        updateBombsAndExplosions();
+        
+        // Draw quiz points
+        drawQuizPoints();
+        
+        // Draw enemies
+        drawEnemies();
+        
+        // Draw player
+        drawPlayer();
+        
+        // Restore the context
+        ctx.restore();
+        
+        // Check for level completion
+        checkLevelCompletion();
+    }
+    
+    gameLoopId = requestAnimationFrame(gameLoop);
+}
+
+// ========== DRAWING FUNCTIONS ==========
+function drawMap() {
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            if (map[r][c] === 1) {
+                // Solid wall
+                ctx.fillStyle = '#555';
+                ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                ctx.fillStyle = '#777';
+                ctx.fillRect(c * tileSize + 2, r * tileSize + 2, tileSize - 4, tileSize - 4);
+            } else if (map[r][c] === 2) {
+                // Breakable wall
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                ctx.fillStyle = '#A0522D';
+                for (let i = 0; i < 3; i++) {
+                    for (let j = 0; j < 3; j++) {
+                        ctx.fillRect(c * tileSize + 5 + i * 10, r * tileSize + 5 + j * 10, 8, 8);
+                    }
+                }
+            } else {
+                // Empty space
+                ctx.fillStyle = '#333';
+                ctx.fillRect(c * tileSize, r * tileSize, tileSize, tileSize);
+                ctx.fillStyle = '#444';
+                ctx.fillRect(c * tileSize + 15, r * tileSize + 15, 10, 10);
+            }
+        }
+    }
+}
+
+function drawPowerUps() {
+    powerUps.forEach(p => {
+        if (map[p.y][p.x] === 2) return; // Only show if wall is broken
+        
+        let color;
+        switch (p.type) {
+            case 0: color = '#FF5555'; break; // Bomb - red
+            case 1: color = '#5555FF'; break; // Range - blue
+            case 2: color = '#55FF55'; break; // Speed - green
+        }
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(p.x * tileSize + tileSize / 2, p.y * tileSize + tileSize / 2, 10, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.fillStyle = '#FFF';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        switch (p.type) {
+            case 0: ctx.fillText("B", p.x * tileSize + tileSize / 2, p.y * tileSize + tileSize / 2); break;
+            case 1: ctx.fillText("R", p.x * tileSize + tileSize / 2, p.y * tileSize + tileSize / 2); break;
+            case 2: ctx.fillText("S", p.x * tileSize + tileSize / 2, p.y * tileSize + tileSize / 2); break;
+        }
+    });
+}
+
+function drawPlayer() {
+    ctx.fillStyle = '#FFCC00';
+    ctx.beginPath();
+    ctx.arc(player.x * tileSize + tileSize / 2, player.y * tileSize + tileSize / 2, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw eyes
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(player.x * tileSize + tileSize / 2 - 5, player.y * tileSize + tileSize / 2 - 3, 3, 0, Math.PI * 2);
+    ctx.arc(player.x * tileSize + tileSize / 2 + 5, player.y * tileSize + tileSize / 2 - 3, 3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw smile
+    ctx.beginPath();
+    ctx.arc(player.x * tileSize + tileSize / 2, player.y * tileSize + tileSize / 2 + 5, 5, 0, Math.PI);
+    ctx.stroke();
+}
+
+function drawEnemies() {
+    enemies.forEach(e => {
+        ctx.fillStyle = '#FF5555';
+        ctx.beginPath();
+        ctx.arc(e.x * tileSize + tileSize / 2, e.y * tileSize + tileSize / 2, 15, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw spikes
+        ctx.fillStyle = '#FF0000';
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const spikeLength = 8;
+            ctx.beginPath();
+            ctx.moveTo(e.x * tileSize + tileSize / 2, e.y * tileSize + tileSize / 2);
+            ctx.lineTo(
+                e.x * tileSize + tileSize / 2 + Math.cos(angle) * (15 + spikeLength),
+                e.y * tileSize + tileSize / 2 + Math.sin(angle) * (15 + spikeLength)
+            );
+            ctx.stroke();
+        }
+    });
+}
+
+function drawQuizPoints() {
+    activeQuizPoints.forEach(q => {
+        if (!q.done) {
+            ctx.fillStyle = '#00FF00';
+            ctx.beginPath();
+            ctx.arc(q.x * tileSize + tileSize / 2, q.y * tileSize + tileSize / 2, 10, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFF';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("?", q.x * tileSize + tileSize / 2, q.y * tileSize + tileSize / 2);
+        }
+    });
+}
+
+function updateBombsAndExplosions() {
+    const now = Date.now();
+    
+    // Draw bombs
+    bombs.forEach((b, i) => {
+        const elapsed = now - b.start;
+        const progress = elapsed / b.timer;
+        
+        // Pulsating effect
+        const size = 15 + Math.sin(progress * Math.PI * 10) * 5;
+        
+        ctx.fillStyle = '#FF0000';
+        ctx.beginPath();
+        ctx.arc(b.x * tileSize + tileSize / 2, b.y * tileSize + tileSize / 2, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Fuse
+        ctx.strokeStyle = '#FFCC00';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(b.x * tileSize + tileSize / 2, b.y * tileSize + tileSize / 2 - 15);
+        ctx.lineTo(b.x * tileSize + tileSize / 2 - 10, b.y * tileSize + tileSize / 2 - 25);
+        ctx.stroke();
+        
+        // Check if bomb should explode
+        if (elapsed >= b.timer) {
+            explode(b);
+            bombs.splice(i, 1);
+        }
+    });
+    
+    // Draw explosions
+    for (let i = explosions.length - 1; i >= 0; i--) {
+        const ex = explosions[i];
+        const elapsed = now - ex.start;
+        
+        if (elapsed > ex.duration) {
+            explosions.splice(i, 1);
+            continue;
+        }
+        
+        const progress = elapsed / ex.duration;
+        const alpha = 1 - progress;
+        const size = tileSize / 2 * (1 + progress * 0.5);
+        
+        ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
+        ctx.beginPath();
+        ctx.arc(ex.x * tileSize + tileSize / 2, ex.y * tileSize + tileSize / 2, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Check if explosion hits player
+        if (!ex.hit) {
+            const dx = player.x - ex.x;
+            const dy = player.y - ex.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 0.8) {
+                ex.hit = true;
+                loseLife();
+            }
+        }
+    }
+}
+
+// ========== GAME MECHANICS ==========
+function moveEnemies() {
+    if (!gameStarted) return;
+    
+    enemies.forEach(e => {
+        const directions = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const shuffled = directions.sort(() => Math.random() - 0.5);
+        
+        for (const [dx, dy] of shuffled) {
+            const nx = e.x + dx;
+            const ny = e.y + dy;
+            
+            if (map[ny] && map[ny][nx] === 0 && 
+                !bombs.some(b => b.x === nx && b.y === ny) &&
+                !explosions.some(ex => ex.x === nx && ex.y === ny)) {
+                
+                e.x = nx;
+                e.y = ny;
+                
+                // Check if enemy collides with player
+                if (e.x === player.x && e.y === player.y) {
+                    loseLife();
+                }
+                
+                break;
+            }
+        }
+    });
+}
+
+function placeBomb() {
+    if (bombs.length >= player.maxBombs) return;
+    if (bombs.some(b => b.x === player.x && b.y === player.y)) return;
+    
+    bombs.push({ x: player.x, y: player.y, timer: 2000, start: Date.now() });
+}
+
+function explode(b) {
+    const now = Date.now();
+    const directions = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+    
+    directions.forEach(([dx, dy]) => {
+        for (let i = 0; i <= player.bombRange; i++) {
+            const nx = b.x + dx * i;
+            const ny = b.y + dy * i;
+            
+            if (!map[ny] || map[ny][nx] === 1) break; // Stop at solid walls
+            
+            explosions.push({ x: nx, y: ny, start: now, duration: 500, hit: false });
+            
+            // Destroy breakable walls
+            if (map[ny][nx] === 2) {
+                map[ny][nx] = 0;
+                
+                // Check if there's a power-up here
+                const powerUpIndex = powerUps.findIndex(p => p.x === nx && p.y === ny);
+                if (powerUpIndex !== -1) {
+                    // Power-up is now visible
+                }
+                
+                score += 2;
+                updateInfo();
+                break;
+            }
+            
+            // Kill enemies
+            for (let j = enemies.length - 1; j >= 0; j--) {
+                if (enemies[j].x === nx && enemies[j].y === ny) {
+                    enemies.splice(j, 1);
+                    score += 10;
+                    updateInfo();
+                    break;
+                }
+            }
+        }
+    });
+}
+
+function loseLife() {
+    player.nyawa--;
+    updateInfo();
+    
+    if (player.nyawa <= 0) {
+        gameOver();
+    } else {
+        // Reset player position
+        player.x = 1;
+        player.y = 1;
+    }
+}
+
+function checkLevelCompletion() {
+    // Level is complete when all enemies are defeated and all quiz points are collected
+    const allEnemiesDefeated = enemies.length === 0;
+    const allQuizPointsCollected = activeQuizPoints.every(q => q.done);
+    
+    if (allEnemiesDefeated && allQuizPointsCollected) {
+        completeLevel();
+    }
+}
+
+function completeLevel() {
+    cancelAnimationFrame(gameLoopId);
+    clearInterval(enemyMoveInterval);
+    
+    document.getElementById('levelScore').textContent = `Skor Level: ${score}`;
+    document.getElementById('levelCompleteScreen').style.display = 'flex';
+}
+
+function nextLevel() {
+    if (currentLevel < maxLevels) {
+        currentLevel++;
+        document.getElementById('levelCompleteScreen').style.display = 'none';
+        initGame();
+    } else {
+        // Game completed
+        document.getElementById('levelCompleteScreen').style.display = 'none';
+        document.getElementById('gameOverScreen').style.display = 'flex';
+        document.getElementById('finalScore').textContent = `Selamat! Anda menyelesaikan game dengan skor: ${score}`;
+    }
+}
+
+function gameOver() {
+    cancelAnimationFrame(gameLoopId);
+    clearInterval(enemyMoveInterval);
+    
+    document.getElementById('finalScore').textContent = `Skor Akhir: ${score}`;
+    document.getElementById('gameOverScreen').style.display = 'flex';
+}
+
+function checkQuiz() {
+    activeQuizPoints.forEach(q => {
+        if (!q.done && player.x === q.x && player.y === q.y) {
+            showQuiz(q);
+        }
+    });
+    
+    // Check for power-up collection
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        const p = powerUps[i];
+        if (player.x === p.x && player.y === p.y && map[p.y][p.x] !== 2) {
+            applyPowerUp(p.type);
+            powerUps.splice(i, 1);
+            updatePowerUpInfo();
+        }
+    }
+}
+
+function applyPowerUp(type) {
+    switch (type) {
+        case 0: // Bomb
+            player.maxBombs++;
+            break;
+        case 1: // Range
+            player.bombRange++;
+            break;
+        case 2: // Speed
+            player.speed = Math.min(2, player.speed + 0.2);
+            break;
+    }
+}
+
+function updatePowerUpInfo() {
+    const info = `Bom: ${player.maxBombs} | Jangkauan: ${player.bombRange} | Kecepatan: ${player.speed.toFixed(1)}`;
+    document.getElementById('powerUpInfo').textContent = info;
+}
+
+// ========== UI FUNCTIONS ==========
+function startGame() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('gameScreen').style.display = 'block';
+    document.getElementById('quizManagerScreen').style.display = 'none';
+    gameStarted = true;
+    initGame();
+}
+
+function restartGame() {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    currentLevel = 1;
+    initGame();
+}
+
+function backToMenu() {
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('quizManagerScreen').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
+    gameStarted = false;
+}
+
+function showInstructions() {
+    alert("Cara Bermain:\n\n" +
+          "1. Gunakan tombol panah untuk bergerak\n" +
+          "2. Tekan spasi untuk menempatkan bom\n" +
+          "3. Hancurkan balok untuk menemukan power-up\n" +
+          "4. Kumpulkan semua titik hijau dan jawab kuisnya\n" +
+          "5. Hancurkan semua musuh untuk menyelesaikan level\n" +
+          "6. Hindari ledakan dan musuh!\n\n" +
+          "Kontrol Mobile:\n" +
+          "- Gunakan D-pad untuk bergerak\n" +
+          "- Tekan tombol BOM untuk menempatkan bom");
+}
+
+function updateInfo() {
+    const doneCount = activeQuizPoints.filter(q => q.done).length;
+    document.getElementById('info').textContent = 
+        `Skor: ${score} | Nyawa: ${player.nyawa} | Bom: ${player.maxBombs} | Jangkauan: ${player.bombRange} | Level: ${currentLevel}`;
+}
+
+function showQuiz(q) {
+    document.getElementById('overlay').style.display = 'block';
+    const modal = document.getElementById('quizModal');
+    modal.style.display = 'block';
+    document.getElementById('question').textContent = q.question;
+    
+    const optionsDiv = document.getElementById('options');
+    optionsDiv.innerHTML = '';
+    
+    q.options.forEach((opt, idx) => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.onclick = () => {
+            if (idx === q.answer) {
+                score += 10;
+            }
+            q.done = true;
+            modal.style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+            updateInfo();
+            checkLevelCompletion();
+        };
+        optionsDiv.appendChild(btn);
+    });
+}
+
+// ========== QUIZ MANAGEMENT FUNCTIONS ==========
+function showQuizManager() {
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('quizManagerScreen').style.display = 'flex';
+    loadQuestionList();
+}
+
+function loadQuestionList() {
+    const questionList = document.getElementById('questionList');
+    questionList.innerHTML = '';
+    
+    if (quizQuestions.length === 0) {
+        questionList.innerHTML = '<p>Tidak ada soal. Silakan tambah soal baru.</p>';
+        return;
+    }
+    
+    quizQuestions.forEach((q, index) => {
+        const questionItem = document.createElement('div');
+        questionItem.className = 'question-item';
+        questionItem.innerHTML = `
+            <strong>${index + 1}. ${q.question}</strong>
+            <div>Opsi: ${q.options.join(', ')}</div>
+            <div>Jawaban benar: ${q.options[q.answer]}</div>
+            <button onclick="deleteQuestion(${q.id})">Hapus</button>
+        `;
+        questionList.appendChild(questionItem);
+    });
+}
+
+function showAddQuestionForm() {
+    document.getElementById('overlay').style.display = 'block';
+    document.getElementById('addQuestionModal').style.display = 'block';
+    document.getElementById('newQuestion').value = '';
+    document.getElementById('optionInputs').innerHTML = `
+        <div class="option-input">
+            <input type="text" placeholder="Opsi jawaban">
+            <button onclick="markAsCorrect(this)">✓</button>
+            <button onclick="removeOption(this)" class="secondary">✕</button>
+        </div>
+    `;
+}
+
+function closeAddQuestionForm() {
+    document.getElementById('addQuestionModal').style.display = 'none';
+    document.getElementById('overlay').style.display = 'none';
+}
+
+function addOption() {
+    const optionInputs = document.getElementById('optionInputs');
+    const newOption = document.createElement('div');
+    newOption.className = 'option-input';
+    newOption.innerHTML = `
+        <input type="text" placeholder="Opsi jawaban">
+        <button onclick="markAsCorrect(this)">✓</button>
+        <button onclick="removeOption(this)" class="secondary">✕</button>
+    `;
+    optionInputs.appendChild(newOption);
+}
+
+function markAsCorrect(button) {
+    // Reset semua tombol correct
+    const allButtons = document.querySelectorAll('#optionInputs button');
+    allButtons.forEach(btn => {
+        if (btn.textContent === '✓') {
+            btn.style.background = '#444';
+        }
+    });
+    
+    // Tandai yang dipilih sebagai correct
+    button.style.background = '#4CAF50';
+}
+
+function removeOption(button) {
+    const optionInput = button.parentElement;
+    if (document.getElementById('optionInputs').childElementCount > 1) {
+        optionInput.remove();
+    }
+}
+
+function saveNewQuestion() {
+    const questionText = document.getElementById('newQuestion').value.trim();
+    if (!questionText) {
+        alert('Pertanyaan tidak boleh kosong!');
+        return;
+    }
+    
+    const optionInputs = document.querySelectorAll('#optionInputs input');
+    const options = [];
+    let correctIndex = -1;
+    
+    for (let i = 0; i < optionInputs.length; i++) {
+        const optionText = optionInputs[i].value.trim();
+        if (!optionText) {
+            alert('Semua opsi jawaban harus diisi!');
+            return;
+        }
+        options.push(optionText);
+        
+        // Cek apakah ini opsi yang benar
+        const correctButton = optionInputs[i].parentElement.querySelector('button');
+        if (correctButton.style.background === 'rgb(76, 175, 80)') {
+            correctIndex = i;
+        }
+    }
+    
+    if (correctIndex === -1) {
+        alert('Harap tentukan jawaban yang benar!');
+        return;
+    }
+    
+    if (options.length < 2) {
+        alert('Minimal harus ada 2 opsi jawaban!');
+        return;
+    }
+    
+    // Simpan soal baru
+    const newId = quizQuestions.length > 0 ? Math.max(...quizQuestions.map(q => q.id)) + 1 : 1;
+    quizQuestions.push({
+        id: newId,
+        question: questionText,
+        options: options,
+        answer: correctIndex
+    });
+    
+    // Simpan ke localStorage
+    localStorage.setItem('bombermanQuizQuestions', JSON.stringify(quizQuestions));
+    
+    // Refresh daftar soal
+    loadQuestionList();
+    closeAddQuestionForm();
+}
+
+function deleteQuestion(id) {
+    if (confirm('Apakah Anda yakin ingin menghapus soal ini?')) {
+        quizQuestions = quizQuestions.filter(q => q.id !== id);
+        localStorage.setItem('bombermanQuizQuestions', JSON.stringify(quizQuestions));
+        loadQuestionList();
+    }
+}
+
+// ========== EVENT LISTENERS ==========
+document.addEventListener('keydown', e => {
+    if (!gameStarted) return;
+    
+    let moved = false;
+    let nx = player.x;
+    let ny = player.y;
+    
+    if (e.key === 'ArrowUp') { ny -= player.speed; moved = true; }
+    if (e.key === 'ArrowDown') { ny += player.speed; moved = true; }
+    if (e.key === 'ArrowLeft') { nx -= player.speed; moved = true; }
+    if (e.key === 'ArrowRight') { nx += player.speed; moved = true; }
+    if (e.key === ' ') placeBomb();
+    
+    if (moved) {
+        // Check if the movement is valid
+        const intX = Math.round(nx);
+        const intY = Math.round(ny);
+        
+        if (map[intY] && map[intY][intX] === 0) {
+            player.x = intX;
+            player.y = intY;
+            checkQuiz();
+        }
+    }
+});
+
+// Handle window resize for mobile
+window.addEventListener('resize', adjustCanvasSize);
+
+// Initialize the game on load
+window.onload = function() {
+    document.getElementById('startScreen').style.display = 'flex';
+    document.getElementById('questionsPerLevel').value = questionsPerLevel;
+    
+    // Check if mobile and adjust UI
+    if (isMobile) {
+        document.querySelector('h1').textContent = 'BOMBERMAN MOBILE';
+    }
+};
+</script>
+</body>
+</html>
